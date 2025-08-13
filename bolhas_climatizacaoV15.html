@@ -1,0 +1,826 @@
+
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8">
+    <title>Matriz de Sistemas x Unidades</title>
+    <style>
+
+      :root{
+        --page-gutter: 16px;           /* <<< um único “gutter” horizontal */
+        --col-border: 1px;
+        --cell-pad-v: 8px;             /* padding vertical compartilhado */
+        --cell-pad-h: 10px;            /* padding horizontal compartilhado */
+        --titulo-font: 1.8vw;          /* font-size compartilhado p/ títulos */
+      }
+
+      /* zera interferência e padroniza cálculo de largura */
+      *,
+      *::before,
+      *::after { box-sizing: border-box; }
+
+      html, body { margin: 0; }
+
+      /* o container visual da página (se não tiver, use body mesmo) */
+      .page {
+        padding-inline: var(--page-gutter);
+      }
+
+      :root {
+        --primary-color: #f6f6f6;
+        --secondary-color: lightgray;
+        --tertiary-color: gray;
+        --quaternary-color: darkslategray;
+        --quinary-color: #E5E4E2;
+        --primary-alert-color: yellow;
+        --secondary-alert-color: rgba(255, 255, 0, 0.1);
+        --margem-horizontal: 8px; /* valor único para legenda e tabela */
+        --padding-celula: 10px 10px; /* vertical horizontal */
+        --font-titulo-coluna: 1.6vw; /* tamanho que quiser */
+        --largura-borda-coluna: 1px;  /* borda compartilhada */
+      }
+
+      html, body {
+        margin: 0;
+      }
+
+      body {
+
+        margin: var(--margem-horizontal);
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        /*padding: 30px;*/
+
+        background: linear-gradient(
+          to right,
+          var(--tertiary-color) 0%,
+          var(--secondary-color) 33%,
+          var(--primary-color) 66%,
+          var(--quinary-color) 100%
+        );
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      colgroup col {
+        width: auto; /* permite que o JS defina via style.width */
+      }
+
+
+      th, td {
+        border: 0.1rem solid;
+        padding: var(--padding-celula);
+        vertical-align: middle;
+
+        font-size: clamp(10px, var(--font-titulo-coluna), 22px);
+              
+        margin: 0;
+      }
+
+      table tbody tr:first-child td { 
+        border-top: 0 !important;
+      }
+
+
+
+      /* Títulos da tabela */
+      thead th {
+        font-size: var(--font-titulo-coluna);
+        border-right: var(--largura-borda-coluna) solid transparent;
+        border-left: var(--largura-borda-coluna) solid transparent;
+        margin: 0;
+
+      }
+
+      /* Remove apenas a borda superior do topo da tabela */
+      table > thead > tr:first-child > th {
+        border-top-color: transparent;
+      }
+
+      /* Primeira coluna (esquerda) - remove borda esquerda */
+      td:first-child,
+      th:first-child {
+        border-left-color: transparent;
+      }
+
+      /* Última linha do corpo da tabela - remove borda inferior */
+      tbody tr:last-child > td {
+        border-bottom-color: transparent;
+      }
+
+
+      /* Última célula de cada linha - remove borda direita */
+      tr > td:last-child,
+      tr > th:last-child {
+        border-right-color: transparent;
+      }
+
+      th {
+        background: transparent;
+        text-align: center;
+        vertical-align: middle;
+      }
+
+      .bolha {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        box-sizing: border-box;
+      }
+
+
+      .bolha .indice {
+        position: relative;
+        z-index: 1;
+        color: white;
+        font-size: 12px;
+        font-weight: bold;
+        pointer-events: none;
+      }
+
+      .popup {
+        position: absolute;
+        background: white;
+        border: 1px solid #ccc;
+        padding: 10px;
+        z-index: 5;
+        width: 250px;
+        display: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        border-radius: 12px;
+      }
+
+      .popup-header {
+        background: black;
+        color: white;
+        font-weight: bold;
+        margin: -10px -10px 10px -10px;
+        padding: 8px;
+        text-align: center;
+        border-bottom: 1px solid #ccc;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+      }
+
+      .popup-item {
+        display: flex;
+        justify-content: space-between;
+      }
+      .popup-item span:first-child {
+        font-weight: bold;
+      }
+
+      .popup button {
+        background: black;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        cursor: pointer;
+        font-weight: bold;
+        border-radius: 4px;
+      }
+
+      .popup button:hover {
+        background: #333;
+      }
+
+      .bolha-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5vw;
+        justify-content: center;
+        align-content: center;
+        height: 100%;
+      }
+
+      td:first-child {
+        text-align: center;
+        vertical-align: middle;
+        font-weight: bold;
+        background: transparent;
+      }
+
+      .bolha-borda-2 {
+        display: inline-flex;
+        border: 2px solid black;
+        border-radius: 50%;
+      }
+
+      .bolha-borda-1 {
+        display: inline-flex;
+        border: 2px dashed black; /* <== aqui troca de branco para preto */
+        border-radius: 50%;
+      }
+
+
+      .bolha-borda-2, .bolha-borda-1 {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 50%;
+        box-sizing: border-box; /* garante bordas e conteúdo no mesmo tamanho */
+      }
+
+
+      #legenda {
+        position: fixed;
+        top: 0;
+        left: var(--margem-horizontal);
+        right: var(--margem-horizontal);
+        margin-bottom: 0;
+
+        /*padding: 20px 10px 20px 10px;*/
+
+        background: linear-gradient(
+          to right,
+          var(--tertiary-color) 0%,
+          var(--secondary-color) 33%,
+          var(--primary-color) 66%,
+          var(--quinary-color) 100%
+        );
+
+        z-index: 3;
+      }
+
+      #legenda .legenda-col-img {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+        max-height: clamp(15px, 6vh, 45px);
+        box-sizing: border-box;
+      }
+
+
+      .legenda-fake-titulos {
+        display: flex;
+        width: 100%;
+        margin-top: 10px;
+        margin-bottom: 0px;
+        border-bottom: 1px solid transparent;
+      }
+
+      .legenda-fake-coluna {
+        /* largura continua vindo inline no HTML */
+        flex: 0 0 auto; /* <-- substituído pelo inline no HTML */
+        box-sizing: border-box;
+        
+        display: flex;                  /* empilha texto e imagem */
+        flex-direction: column;         /* um em cima do outro */
+        align-items: center;            /* centraliza horizontalmente */
+
+        font-weight: bold;
+        padding: var(--padding-celula);
+        font-size: var(--font-titulo-coluna);
+        
+        border-right: var(--largura-borda-coluna) solid transparent;
+        border-left: var(--largura-borda-coluna) solid transparent;
+
+        gap: 10px; /* espaço entre o texto e a imagem */
+      }
+
+
+      .legenda-fake-coluna:last-child {
+        border-right: none;
+      }
+
+       
+      .legenda-bloco {
+        margin: 10px 0;
+      }
+
+      .legenda-linha {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 2px;
+        margin: 2px;
+
+        /* controle do tamanho do texto */
+        max-height: 30px;  /* garante que não passe metade do rodapé */
+      }
+
+      .legenda-label {
+        display: flex;
+        align-items: center;
+        font-weight: bold;
+        white-space: nowrap;
+        height: 100%;
+      }
+
+      .legenda-grupo {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .legenda-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 6px;
+        white-space: nowrap;
+        
+        /* controle do tamanho do texto */
+        font-size: clamp(10px, 1.2vw, 14px); /* mínimo 10px, escala com viewport, máximo 14px */
+
+      }
+
+      .wifi-sim {
+        border: 2px solid black;
+      }
+
+      .wifi-nao {
+        border: 2px dashed black;
+      }
+
+      .comando-cabo {
+        border: 4px solid black;
+      }
+
+      .comando-ir {
+        border: 4px dashed black;
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+      }
+
+      table {
+        width: 100%;
+        margin-top: 0;
+        border-spacing: 0;
+      }
+
+      thead tr:first-child {
+        display: none;
+      }
+
+
+      .bolha-legenda {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+      }
+
+      .borda-legenda {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border-width: 2px;
+      }
+
+      .legenda-conteudo {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* centraliza os dois primeiros blocos */
+        box-sizing: border-box;
+      }
+
+      /* texto do rótulo */
+      .legenda-col-label {
+        line-height: 1.1;
+      }
+
+      /* a imagem ocupa a largura da célula e mantém proporção */
+      .legenda-col-img {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+        /* controle de altura máxima, ajuste se quiser */
+        max-height: 72px;
+        /* evita que estoure a célula se a borda/padding variam */
+        box-sizing: border-box;
+      }
+
+      table > thead > tr:first-child > th {
+        border-top: none;
+      }
+
+      .legenda-linha {
+        line-height: 0.5;
+      }
+
+      #rodape-fixo {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 5px;
+        text-align: center;
+        font-weight: bold;
+        z-index: 4; /* acima do resto (e da legenda) */
+        font-size: clamp(10px, 1.0vw, 14px);
+        max-height: 80px;  /* altura máxima */
+
+        
+        display: flex;              /* coloca logo e texto em bloco */
+        flex-direction: column;     /* logo em cima, texto embaixo */
+        align-items: center;        /* centraliza horizontalmente */
+
+        background: linear-gradient(
+          to right,
+          var(--tertiary-color) 0%,
+          var(--secondary-color) 33%,
+          var(--primary-color) 66%,
+          var(--quinary-color) 100%
+        );
+      }
+
+      body {
+        padding-top: var(--altura-legenda, 0px);
+        padding-bottom: 100px; /* ajuste à altura do rodapé */
+      }
+
+      .rodape-logo {
+        max-height: 30px;  /* garante que não passe metade do rodapé */
+        height: 3.5vw; /* mantém responsivo */
+        width: auto;
+        margin-top: 0.5vw; /* espaço entre logo e texto */
+        margin-bottom: 0.25vw; /* espaço entre logo e texto */
+      }
+
+
+    </style>
+</head>
+  <body>
+
+    <div class="container">
+
+      <div id="legenda">
+        <div class="legenda-linha">
+          <div class="legenda-grupo" id="legenda-marcas"></div>
+        </div>
+
+        <div class="legenda-linha">
+          <div class="legenda-grupo" id="legenda-simbolos"></div>
+        </div>
+      </div>
+
+      <table id="matriz">
+        <thead>
+          <tr id="header-row">
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="body-table"></tbody>
+      </table>
+
+      <div id="rodape-fixo">
+        <span>Fonte: EJM PRO App | 10 m distância entre UI e UE | Sem desnível entre UI e UE | Apenas custo de equipamentos | Cenários simulados para o consumidor português em 2024</span>
+        <img src="Logo-EJMPRO.png" alt="EJM PRO" class="rodape-logo">
+
+      </div>
+
+
+    </div>
+
+    <script src="./dados.js"></script>
+
+    <script>
+
+
+      // --- refs básicas
+      const tabela = document.getElementById("matriz");
+      const cabecalho = document.getElementById("header-row");
+      const corpo = document.getElementById("body-table");
+
+      // --- CORES (sim, aqui estão as cores)
+      const cores = {
+        "Daikin": "blue",
+        "Samsung": "grey",
+        "Mitsubishi": "red",
+        "Hisense": "green"
+      };
+
+      // --- ordenar e filtrar colunas/linhas
+      const ordemSistemas = ["Mono Split 1x1", "Multi Split 1x2", "Multi Split 1x3", "Multi Split 1x4", "Multi Split 1x5"];
+      const sistemas = ordemSistemas.filter(s => dados.some(d => d.sistema === s));
+
+      const ordemDesejada = ["Mural", "Condutas", "Chão", "Cassete"];
+      const unidades = ordemDesejada.filter(unidade => dados.some(d => d.unidade === unidade));
+
+      // --- limpar cabeçalho/colgroup antigos (se re-renderizar)
+      cabecalho.textContent = "";
+      tabela.querySelectorAll("colgroup").forEach(cg => cg.remove());
+
+      // --- criar COLGROUP: 10% + (90% / N)
+      const totalCols = 1 + unidades.length;
+      const colgroup = document.createElement("colgroup");
+      for (let i = 0; i < totalCols; i++) {
+        const col = document.createElement("col");
+        col.style.width = (i === 0) ? "10%" : `${90 / (totalCols - 1)}%`;
+        colgroup.appendChild(col);
+      }
+      tabela.insertBefore(colgroup, tabela.firstChild);
+
+      // --- criar THEAD (uma vez só)
+      const thSistema = document.createElement("th");
+      thSistema.innerText = "";
+      cabecalho.appendChild(thSistema);
+
+      unidades.forEach(unidade => {
+        const th = document.createElement("th");
+        th.innerText = unidade;
+        cabecalho.appendChild(th);
+      });
+
+
+      // Criar linhas da tabela
+      sistemas.forEach(sistema => {
+        const tr = document.createElement("tr");
+        const td_sistema = document.createElement("td");
+        td_sistema.innerText = sistema;
+        tr.appendChild(td_sistema);
+
+        unidades.forEach(unidade => {
+          const td = document.createElement("td");
+          const filtrados = dados.filter(d => d.sistema === sistema && d.unidade === unidade);
+
+          // Novo contêiner para agrupar bolhas
+          const bolhaContainer = document.createElement("div");
+          bolhaContainer.className = "bolha-container";
+
+          filtrados.forEach(d => {
+
+            const outer = document.createElement("div");
+            outer.className = "bolha-borda-2";
+
+            const inner = document.createElement("div");
+            inner.className = "bolha-borda-1";
+
+            const bolha = document.createElement("div");
+            bolha.className = "bolha";
+
+
+            // Tamanho dinâmico baseado no índice
+            const minIndex = 1.2;
+            const maxIndex = 7.6;
+            const minSize = 20;
+            const maxSize = 80;
+            const escala = Math.max(0, Math.min(1, (d.indice - minIndex) / (maxIndex - minIndex)));
+            const size = minSize + escala * (maxSize - minSize);
+
+            const borderPadding = 3; // mesmo valor do padding no CSS
+
+            // bolha (miolo colorido)
+            bolha.style.width = `${size}px`;
+            bolha.style.height = `${size}px`;
+
+            // borda 1 (wifi)
+            const innerSize = size + 2 * borderPadding;
+            inner.style.width = `${innerSize}px`;
+            inner.style.height = `${innerSize}px`;
+
+            // borda 2 (comando)
+            const outerSize = innerSize + 2 * borderPadding;
+            outer.style.width = `${outerSize}px`;
+            outer.style.height = `${outerSize}px`;
+
+
+            // Bordas dinâmicas
+            //const isWifiSim = d.wifi.toLowerCase().includes("sim");
+
+            const textoWifi = d.wifi.toLowerCase();
+            const hasWifi = textoWifi.includes("sim") || textoWifi.includes("de série");
+
+            const textoComando = d.comando.toLowerCase();
+            const isComandoCabo = textoComando.includes("parede") || textoComando.includes("cabo");
+
+            // Comando: sempre visível
+            inner.style.borderStyle = isComandoCabo ? "solid" : "dashed";
+
+            // Wi-Fi: visível apenas se houver
+            outer.style.borderStyle = hasWifi ? "dotted" : "solid";
+            outer.style.borderColor = hasWifi ? "black" : "transparent";
+
+
+            bolha.style.background = cores[d.marca] || "black";
+
+            const label = document.createElement("span");
+            label.className = "indice";
+            label.textContent = d.indice.toFixed(2);
+
+            bolha.appendChild(label);     // o texto vai dentro da bolha
+            inner.appendChild(bolha);    // bolha dentro da borda branca
+            outer.appendChild(inner);    // borda branca dentro da borda preta
+            bolhaContainer.appendChild(outer);  // tudo dentro do container
+
+
+            const fontSize = size * 0.3; // ou 0.25 se quiser mais discreto
+            label.style.fontSize = `${fontSize}px`;
+
+            // Evento de clique
+            bolha.onclick = e => {
+              e.stopPropagation();
+              document.querySelectorAll(".popup").forEach(p => p.remove());
+
+              const popup = document.createElement("div");
+
+              const marcaCor = cores[d.marca] || "black";
+              const coresSuaves = {
+                blue: "#d0d8ff",
+                grey: "#e0e0e0",
+                red: "#ffd4d4",
+                green: "#d3f5d3",
+                black: "#eeeeee"
+              };
+
+              popup.style.background = coresSuaves[marcaCor] || "#f5f5f5";
+              popup.className = "popup";
+              popup.innerHTML = `
+                <div class="popup-header">${d.descricao}</div>
+                <div class="popup-item"><span>Catálogo:</span><span>${d.ano_catalogo}</span></div>
+                <div class="popup-item"><span>Marca:</span><span>${d.marca}</span></div>
+                <div class="popup-item"><span>Sistema:</span><span>${d.sistema}</span></div>
+                <div class="popup-item"><span>Unidade:</span><span>${d.unidade}</span></div>
+                <div class="popup-item"><span>Comando:</span><span>${d.comando}</span></div>
+                <div class="popup-item"><span>Wi-Fi:</span><span>${d.wifi}</span></div>
+                <div class="popup-item"><span>Índice:</span><span>${d.indice}</span></div>
+                <div style="text-align: center; margin-top: 10px;">
+                  <button id="fechar-popup">Fechar</button>
+                </div>
+              `;
+
+              popup.style.position = "absolute";
+              popup.style.visibility = "hidden";
+              popup.style.display = "block";
+              document.body.appendChild(popup); // Adiciona para medir
+
+              const rect = bolha.getBoundingClientRect();
+              const colIndex = [...td.parentElement.children].indexOf(td); // coluna
+              const tr = td.parentElement;
+              const rowIndex = [...tr.parentElement.children].indexOf(tr); // linha
+
+              const popupWidth = 250;
+              const popupHeight = popup.offsetHeight;
+
+              const isRightSide = colIndex === 1 || colIndex === 2;
+              const isTopSide = rowIndex >= 4;
+
+              // Posição vertical dinâmica
+              const offsetY = isTopSide
+                ? window.scrollY + rect.top - popupHeight - 5
+                : window.scrollY + rect.bottom + 5;
+
+              // Posição horizontal dinâmica
+              const offsetX = isRightSide
+                ? window.scrollX + rect.right + 5
+                : window.scrollX + rect.left - popupWidth - 5;
+
+              popup.style.top = `${offsetY}px`;
+              popup.style.left = `${offsetX}px`;
+              popup.style.visibility = "visible";
+
+              // Botão "Fechar"
+              document.getElementById("fechar-popup").onclick = () => popup.remove();
+            };
+
+
+          });
+
+          td.appendChild(bolhaContainer); // Coloca o contêiner no td
+          tr.appendChild(td);
+        });
+
+        corpo.appendChild(tr);
+
+      });
+
+      // --- LEGENDA alinhada com as MESMAS larguras do colgroup
+      const legenda = document.getElementById("legenda");
+
+      // marcas/cores
+      const coresMarcas = Object.entries(cores).map(([marca, cor]) => {
+        return `<div class="legenda-item">
+                  <div class="bolha-legenda" style="background:${cor}"></div>
+                  <span>${marca}</span>
+                </div>`;
+      }).join("");
+
+      // símbolos (como você já tinha)
+      const simbolos = `
+        <div class="legenda-item">
+          <div class="bolha-borda-2" style="border-style: solid; border-color: transparent;">
+            <div class="bolha-borda-1" style="border-style: dashed; border-color: black;">
+              <div class="bolha" style="width:14px; height:14px; background:#00bfff;"></div>
+            </div>
+          </div>
+          <span>Comando por Infravermelho</span>
+        </div>
+        <div class="legenda-item">
+          <div class="bolha-borda-2" style="border-style: solid; border-color: transparent;">
+            <div class="bolha-borda-1" style="border-style: solid; border-color: black;">
+              <div class="bolha" style="width:14px; height:14px; background:#00bfff;"></div>
+            </div>
+          </div>
+          <span>Comando de parede</span>
+        </div>
+        <div class="legenda-item">
+          <div class="bolha-borda-2" style="border-style: dotted; border-color: black; border-width: 2px;">
+            <div class="bolha-borda-1" style="border-style: solid; border-color: transparent;">
+              <div class="bolha" style="width:14px; height:14px; background:#00bfff;"></div>
+            </div>
+          </div>
+          <span>Com Wi-Fi</span>
+        </div>
+      `;
+
+      // pega as larguras do colgroup pra espelhar na legenda
+      const colWidths = Array.from(tabela.querySelectorAll("colgroup col")).map(c => c.style.width);
+
+      const imageNameByUnidade = {
+        "Mural": "Mural.png",
+        "Condutas": "Conduta.png",
+        "Chão": "Chão.png",
+        "Cassete": "Cassete.png"
+      };
+
+      const titulosFake = `
+        <div class="legenda-fake-titulos" style="display:flex; width:100%;">
+          <!-- 1ª coluna (Sistema) vazia, mas preservando a largura -->
+          <div class="legenda-fake-coluna" style="flex:0 0 10%; border-right: var(--largura-borda-coluna) solid transparente; border-left: var(--largura-borda-coluna) solid transparent;">
+            &nbsp;
+          </div>
+
+          ${unidades.map(ui => {
+            const fileName = imageNameByUnidade[ui] || `${ui}.png`;
+            const src = encodeURI(fileName); // lida com espaço/acentos
+            const basis = `${90 / unidades.length}%`;
+            return `
+              <div class="legenda-fake-coluna" style="flex:0 0 ${basis}; border-right: var(--largura-borda-coluna) solid transparente; border-left: var(--largura-borda-coluna) solid transparent;">
+                <div class="legenda-col-label">${ui}</div>
+                <img class="legenda-col-img" src="${src}" alt="${ui}">
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+
+
+
+      legenda.innerHTML = `
+        <div class="legenda-conteudo">
+
+          <!-- Título -->
+          <div class="legenda-linha legenda-tituloPrincipal" style="justify-content: center; font-weight: bold; font-size: clamp(12px, 3vw, 32px); margin-top: 20px; margin-bottom: 20px">
+            Potência (W) por valor investido (€)
+          </div>
+
+          <!-- Marcas -->
+          <div class="legenda-linha" style="justify-content: center; margin-top: 0px; margin-bottom: 0px; font-size: 1.0vw;">
+            <div class="legenda-bloco">${coresMarcas}</div>
+          </div>
+
+          <!-- Símbolos -->
+          <div class="legenda-linha" style="justify-content: center; margin-top: 0px; margin-bottom: 0px; font-size: 1.0vw;">
+            <div class="legenda-bloco">${simbolos}</div>
+          </div>
+
+          <!-- Títulos fake -->
+          ${titulosFake}
+
+        </div>
+      `;
+
+
+      // --- padding do body = altura real da legenda, sempre atualizado ---
+      function atualizaAlturaLegenda() {
+        const h = document.getElementById("legenda").offsetHeight || 0;
+        document.documentElement.style.setProperty('--altura-legenda', h + 'px');
+      }
+
+      // 1) assim que o DOM existir
+      document.addEventListener('DOMContentLoaded', atualizaAlturaLegenda);
+
+      // 2) depois que TUDO carregar (imagens, fontes, etc.)
+      window.addEventListener('load', atualizaAlturaLegenda);
+
+      // 3) se a legenda mudar de tamanho por qualquer motivo (imagens carregando, wrap de texto, etc.)
+      const obs = new ResizeObserver(() => atualizaAlturaLegenda());
+      obs.observe(document.getElementById('legenda'));
+
+      // 4) se a janela mudar
+      window.addEventListener('resize', atualizaAlturaLegenda);
+
+      // 5) se você trocar o conteúdo da legenda no futuro, chame manualmente:
+      // atualizaAlturaLegenda();
+
+        //
+      //
+      
+    </script>
+  </body>
+</html>
+
