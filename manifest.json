@@ -1,0 +1,40 @@
+{
+  "name": "EJMPRO - Base de Dados - 2024",
+  "short_name": "Benchmark - 2024",
+  "id": "/",
+  "start_url": "/?utm_source=web_app_manifest",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "pt-PT",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "description": "Página web para comparação rápida de sistemas de ar condicionado.",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "navigate-new"
+  },
+  "url_handlers": [
+    { "origin": "https://wa.me" },
+    { "origin": "https://api.whatsapp.com" },
+    { "origin": "https://www.ejmpro.com" },
+    { "origin": "https://forms.gle" }
+  ]
+}
+
+
+
+
+
+  
